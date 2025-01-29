@@ -1,7 +1,10 @@
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 
-const wss = new WebSocket.Server({ port: 8080 });
+// Usar el puerto proporcionado por Railway o un valor predeterminado (8080)
+const port = process.env.PORT || 8080;
+
+const wss = new WebSocket.Server({ port });
 const clients = {};
 
 wss.on('connection', (ws) => {
@@ -78,7 +81,7 @@ wss.on('connection', (ws) => {
                     clients[recipientId].send(
                         JSON.stringify({
                             type: 'video',
-                            senderId: clientId, // Aquí se corrigió el error tipográfico
+                            senderId: clientId,
                             data: parsedMessage.data,
                         })
                     );
@@ -99,4 +102,4 @@ wss.on('connection', (ws) => {
     });
 });
 
-console.log('Servidor WebSocket escuchando en ws://localhost:8080');
+console.log(`Servidor WebSocket escuchando en ws://localhost:${port}`);
