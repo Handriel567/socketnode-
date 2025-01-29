@@ -1,42 +1,102 @@
 const WebSocket = require('ws');
-const PORT = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port: PORT });
+const { v4: uuidv4 } = require('uuid');
 
-// Objeto para almacenar los usuarios conectados con su ID
+const wss = new WebSocket.Server({ port: 8080 });
 const clients = {};
 
-// Función para generar un ID único para cada cliente
-function generateClientId() {
-  return Math.random().toString(36).substr(2, 9);  // Genera un ID único
-}
-
 wss.on('connection', (ws) => {
-  const clientId = generateClientId();  // Asignar un ID único al cliente
-  console.log(`Cliente conectado con ID: ${clientId}`);
+    const clientId = uuidv4();
+    clients[clientId] = ws;
 
-  // Almacenar al cliente en el objeto clients con su ID
-  clients[clientId] = ws;
+    console.log(`Cliente conectado: ${clientId}`);
+    ws.send(JSON.stringify({ type: 'welcome', clientId }));
 
-  // Enviar el ID al cliente para que lo pueda usar
-  ws.send(JSON.stringify({ type: 'ID', id: clientId }));
+    ws.on('message', (message) => {
+        try {
+            const parsedMessage = JSON.parse(message);
+            console.log('Mensaje recibido:', parsedMessage);
 
-  // Escuchar los mensajes del cliente
-  ws.on('message', (message) => {
-    console.log('Recibido: %s', message);
+            const recipientId = parsedMessage.recipientId;
+            console.log(recipientId);
 
-    // Enviar un mensaje a otro cliente por su ID
-    const parsedMessage = JSON.parse(message);
-    if (parsedMessage.type === 'message' && parsedMessage.to && clients[parsedMessage.to]) {
-      const targetClient = clients[parsedMessage.to];
-      targetClient.send(`Mensaje de ${clientId}: ${parsedMessage.text}`);
-    }
-  });
+            // Manejo de tipo 'text'
+            if (parsedMessage.type === 'text') {
+                if (clients[recipientId]) {
+                    clients[recipientId].send(
+                        JSON.stringify({
+                            type: 'text',
+                            senderId: clientId,
+                            data: parsedMessage.data,
+                        }),
+                        (err) => {
+                            if (err) {
+                                console.error(`Error al enviar mensaje al cliente ${recipientId}:`, err);
+                            }
+                        }
+                    );
+                    console.log(`Texto enviado al cliente ${recipientId}`);
+                } else {
+                    console.log(`Destinatario ${recipientId} no encontrado.`);
+                }
+            }
 
-  // Eliminar al cliente de la lista cuando se desconecte
-  ws.on('close', () => {
-    delete clients[clientId];
-    console.log(`Cliente con ID ${clientId} desconectado`);
-  });
+            // Manejo de tipo 'photo'
+            else if (parsedMessage.type === 'photo') {
+                if (clients[recipientId]) {
+                    clients[recipientId].send(
+                        JSON.stringify({
+                            type: 'photo',
+                            senderId: clientId,
+                            data: parsedMessage.data,
+                        })
+                    );
+                    console.log(`Imagen enviada al cliente ${recipientId}`);
+                } else {
+                    console.log(`Destinatario ${recipientId} no encontrado.`);
+                }
+            }
+
+            // Manejo de tipo 'audio'
+            else if (parsedMessage.type === 'audio') {
+                if (clients[recipientId]) {
+                    clients[recipientId].send(
+                        JSON.stringify({
+                            type: 'audio',
+                            senderId: clientId,
+                            data: parsedMessage.data,
+                        })
+                    );
+                    console.log(`Audio enviado al cliente ${recipientId}`);
+                } else {
+                    console.log(`Destinatario ${recipientId} no encontrado.`);
+                }
+            }
+
+            // Manejo de tipo 'video'
+            else if (parsedMessage.type === 'video') {
+                if (clients[recipientId]) {
+                    clients[recipientId].send(
+                        JSON.stringify({
+                            type: 'video',
+                            senderId: clientId, // Aquí se corrigió el error tipográfico
+                            data: parsedMessage.data,
+                        })
+                    );
+                    console.log(`Video enviado al cliente ${recipientId}`);
+                } else {
+                    console.log(`Destinatario ${recipientId} no encontrado.`);
+                }
+            }
+
+        } catch (error) {
+            console.error('Error procesando mensaje:', error);
+        }
+    });
+
+    ws.on('close', () => {
+        console.log(`Cliente desconectado: ${clientId}`);
+        delete clients[clientId];
+    });
 });
 
-console.log(`Servidor WebSocket corriendo en el puerto ${PORT}`);
+console.log('Servidor WebSocket escuchando en ws://localhost:8080');
