@@ -6,6 +6,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "uuid": "^11.0.5",
     "ws": "^8.4.0"
   }
 }
